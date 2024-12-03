@@ -23,31 +23,40 @@ stages:
   - stage: Deploy
     dependsOn: Build
     jobs:
-      - job: DeployToDev
+      - deployment: DeployToDev
         pool:
           vmImage: 'ubuntu-latest'
-        steps:
-          - script: |
-              kubectl apply -f k8s/dev-deployment.yaml
-            displayName: Deploy to Dev
         environment: dev
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: |
+                    kubectl apply -f k8s/dev-deployment.yaml
+                  displayName: Deploy to Dev
 
-      - job: DeployToUAT
+      - deployment: DeployToUAT
         dependsOn: DeployToDev
         pool:
           vmImage: 'ubuntu-latest'
-        steps:
-          - script: |
-              kubectl apply -f k8s/uat-deployment.yaml
-            displayName: Deploy to UAT
         environment: uat
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: |
+                    kubectl apply -f k8s/uat-deployment.yaml
+                  displayName: Deploy to UAT
 
-      - job: DeployToProd
+      - deployment: DeployToProd
         dependsOn: DeployToUAT
         pool:
           vmImage: 'ubuntu-latest'
-        steps:
-          - script: |
-              kubectl apply -f k8s/prod-deployment.yaml
-            displayName: Deploy to Prod
         environment: prod
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - script: |
+                    kubectl apply -f k8s/prod-deployment.yaml
+                  displayName: Deploy to Prod
