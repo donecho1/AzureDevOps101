@@ -1,0 +1,50 @@
+trigger:
+  branches:
+    include:
+      - dev
+      - uat
+      - prod
+
+stages:
+  - stage: Build
+    jobs:
+      - job: BuildDockerImage
+        pool:
+          vmImage: 'ubuntu-latest'
+        steps:
+          - task: Docker@2
+            displayName: Build and Push Docker Image
+            inputs:
+              command: buildAndPush
+              repository: $(dockerRegistryServiceConnection)/myapp
+              dockerfile: Dockerfile
+              tags: $(Build.BuildId)
+  - stage: Deploy
+    dependsOn: Build
+    jobs:
+      - deployment: DeployToDev
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: dev
+        steps:
+          - script: |
+              kubectl apply -f k8s/dev-deployment.yaml
+            displayName: Deploy to Dev
+      - deployment: DeployToUAT
+        dependsOn: DeployToDev
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: uat
+        steps:
+          - script: |
+              kubectl apply -f k8s/uat-deployment.yaml
+            displayName: Deploy to UAT
+      - deployment: DeployToProd
+        dependsOn: DeployToUAT
+        pool:
+          vmImage: 'ubuntu-latest'
+        environment: prod
+        steps:
+          - script: |
+              kubectl apply -f k8s/prod-deployment.yaml
+            displayName: Deploy to Prod
